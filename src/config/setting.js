@@ -87,6 +87,14 @@ export const DEFAULT_INPUT_RULE = {
   showDot: OPT_INPUT_DOT_MOBILE, // 图标指示器显示策略
 };
 
+// --- 回车翻译并发送配置 (独立于普通输入翻译) ---
+export const DEFAULT_ENTER_SEND_RULE = {
+  transOpen: false, // 是否开启回车键自动翻译并发送
+  transSign: "", // 起始标识（触发翻译前缀符号，例如 "#"）
+  fromLang: "auto", // 默认自动检测输入源语言
+  toLang: "en", // 默认翻译目标语言为英文
+};
+
 // --- 划词/选区翻译配置 ---
 export const PHONIC_MAP = {
   en_phonic: ["英", "uk"], // 英国英语发音
@@ -262,6 +270,7 @@ export const DEFAULT_SETTING = {
   // mouseKey: OPT_TIMING_PAGESCROLL, // 翻译时机/鼠标悬停翻译(移至rule，作废)
   shortcuts: DEFAULT_SHORTCUTS, // 键盘快捷键配置对象
   inputRule: DEFAULT_INPUT_RULE, // 输入框即时翻译相关配置
+  enterSendRule: DEFAULT_ENTER_SEND_RULE, // 回车自动翻译发送相关配置
   tranboxSetting: DEFAULT_TRANBOX_SETTING, // 划词翻译及字典结果面板配置
   // touchTranslate: 2, // 触屏翻译 {5:单指双击，6:单指三击，7:双指双击} (作废)
   touchModes: [2], // 触屏移动端翻译触发行为配置 (数组，支持多选，如单指双击/三击)

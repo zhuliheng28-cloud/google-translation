@@ -59,6 +59,7 @@ export default function InputSetting() {
     triggerTime,
     transSign,
     showDot,
+    autoTranslateOnEnter,
     blacklist = "",
   } = inputRule;
 
@@ -78,6 +79,24 @@ export default function InputSetting() {
             />
           }
           label={i18n("use_input_box_translation")}
+          sx={{ width: "fit-content" }}
+        />
+
+        {/* 开关：是否在按下回车键时自动翻译并发送 */}
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              name="autoTranslateOnEnter"
+              checked={autoTranslateOnEnter}
+              onChange={() => {
+                updateInputRule({
+                  autoTranslateOnEnter: !autoTranslateOnEnter,
+                });
+              }}
+            />
+          }
+          label={"回车键自动翻译并发送 (仅回车)"}
           sx={{ width: "fit-content" }}
         />
 
