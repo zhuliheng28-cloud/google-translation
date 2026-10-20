@@ -30,6 +30,7 @@ import {
   MSG_POPUP_TOGGLE,
   MSG_MOUSEHOVER_TOGGLE,
   MSG_TRANSINPUT_TOGGLE,
+  MSG_ENTER_SEND_TOGGLE,
 } from "../config";
 import { logger } from "./log";
 
@@ -696,6 +697,17 @@ export default class TranslatorManager {
       case MSG_TRANSINPUT_TOGGLE:
         this._inputTranslator?.toggle();
         this._translator?.toggleInputTranslate();
+        break;
+      case MSG_ENTER_SEND_TOGGLE:
+        if (args) {
+          this.#setting.enterSendRule = {
+            ...this.#setting.enterSendRule,
+            ...args,
+          };
+          this._inputTranslator?.updateConfig({
+            enterSendRule: this.#setting.enterSendRule,
+          });
+        }
         break;
       case MSG_HOVERNODE_TOGGLE:
         this._translator?.toggleHoverNode();

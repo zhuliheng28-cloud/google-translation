@@ -251,15 +251,18 @@ export class InputTranslator {
   #boundFocusIn;
   #boundFocusOut;
   #boundUpdatePos;
+  #boundKeyDown;
 
   constructor({
     inputRule = DEFAULT_INPUT_RULE,
+    enterSendRule = { transOpen: false, transSign: "" },
     transApis = [],
     prompts = [],
     subtitleSetting = {},
   } = {}) {
     this.#config = {
       inputRule,
+      enterSendRule,
       prompts,
       subtitleSetting,
       transApis,
@@ -274,6 +277,7 @@ export class InputTranslator {
     this.#boundFocusIn = this.handleFocusIn.bind(this);
     this.#boundFocusOut = this.handleFocusOut.bind(this);
     this.#boundUpdatePos = this.updateBtnPosition.bind(this);
+    this.#boundKeyDown = this.handleKeyDown.bind(this);
 
     if (this.#config.inputRule.transOpen) {
       this.enable();
@@ -295,6 +299,7 @@ export class InputTranslator {
     // 2. 注册 DOM 监听
     document.addEventListener("focusin", this.#boundFocusIn);
     document.addEventListener("focusout", this.#boundFocusOut);
+    document.addEventListener("keydown", this.#boundKeyDown, true);
     window.addEventListener("scroll", this.#boundUpdatePos, true);
     window.addEventListener("resize", this.#boundUpdatePos);
 
@@ -326,6 +331,7 @@ export class InputTranslator {
     // 2. 移除 DOM 监听
     document.removeEventListener("focusin", this.#boundFocusIn);
     document.removeEventListener("focusout", this.#boundFocusOut);
+    document.removeEventListener("keydown", this.#boundKeyDown, true);
     window.removeEventListener("scroll", this.#boundUpdatePos, true);
     window.removeEventListener("resize", this.#boundUpdatePos);
 
@@ -392,6 +398,78 @@ export class InputTranslator {
         }
       }
     }, 150);
+  }
+
+  async handleKeyDown(e) {
+    if (!this.#isEnabled || !this.#config.enterSendRule?.transOpen) return;
+
+    // 仅拦截纯回车键，Shift+Enter 等带有修饰键的忽略（用于换行等正常操作）
+    if (
+      e.key !== "Enter" ||
+      e.shiftKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.metaKey ||
+      e.isComposing
+    ) {
+      return;
+    }
+
+    // 忽略我们自己发出的合成事件，避免死循环
+    if (e.__kiss_synthetic__) return;
+
+    const target = getDeepActiveElement();
+    if (isEditableTarget(target) && this.#activeInput === target) {
+      let text = getNodeText(target);
+      const enterSendSign = this.#config.enterSendRule.transSign || "";
+
+      // 如果配置了起始标识，必须以此标识开头才触发回车翻译
+      if (enterSendSign && !text.startsWith(enterSendSign)) {
+        return; // 不拦截，走原生回车
+      }
+
+      // 阻止原有的回车事件（阻止发送）
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      if (!text.trim()) {
+        // 如果为空，直接分发一个正常的合成回车事件让原网页处理
+        this.dispatchSyntheticEnter(target);
+        return;
+      }
+
+      // 如果有起始标识，翻译前先把它删掉
+      if (enterSendSign && text.startsWith(enterSendSign)) {
+        text = text.substring(enterSendSign.length);
+        // 先把删除了标识的文本回填进去
+        setNativeValue(target, text);
+        await sleep(20);
+      }
+
+      // 等待翻译和替换完成，使用 isBtnTrigger: true 跳过常规触发符裁剪逻辑，并传入特定的回车发送配置
+      await this.handleTranslate({
+        isBtnTrigger: true,
+        overrideRule: this.#config.enterSendRule,
+      });
+
+      // 翻译完成后，发出合成的回车事件，触发原网页的发送逻辑
+      this.dispatchSyntheticEnter(target);
+    }
+  }
+
+  dispatchSyntheticEnter(target) {
+    const enterEvent = new KeyboardEvent("keydown", {
+      key: "Enter",
+      code: "Enter",
+      keyCode: 13,
+      which: 13,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    enterEvent.__kiss_synthetic__ = true;
+    target.dispatchEvent(enterEvent);
   }
 
   // [修复问题1]：使用参数 inputNode 确保逻辑闭环
@@ -529,8 +607,9 @@ export class InputTranslator {
    * 执行翻译逻辑
    * @param {Object} options
    * @param {boolean} options.isBtnTrigger 是否由悬浮按钮触发
+   * @param {Object} options.overrideRule 覆盖默认的翻译规则 (用于独立的回车发送翻译)
    */
-  async handleTranslate({ isBtnTrigger = false } = {}) {
+  async handleTranslate({ isBtnTrigger = false, overrideRule = null } = {}) {
     logger.debug("handle input translate");
 
     // 1. 获取真正的焦点元素
@@ -542,8 +621,9 @@ export class InputTranslator {
       return;
     }
 
-    const { apiSlug, transSign, triggerCount } = this.#config.inputRule;
-    let { fromLang, toLang } = this.#config.inputRule;
+    const ruleToUse = overrideRule || this.#config.inputRule;
+    const { apiSlug, transSign, triggerCount } = this.#config.inputRule; // 依然使用 inputRule 的 apiSlug
+    let { fromLang, toLang } = ruleToUse;
 
     // 3. 获取文本
     let initText = getNodeText(node);
@@ -631,11 +711,18 @@ export class InputTranslator {
     }
   }
 
-  updateConfig({ inputRule, transApis, prompts, subtitleSetting }) {
+  updateConfig({
+    inputRule,
+    enterSendRule,
+    transApis,
+    prompts,
+    subtitleSetting,
+  }) {
     const wasEnabled = this.#isEnabled;
     if (wasEnabled) this.disable();
 
     if (inputRule) this.#config.inputRule = inputRule;
+    if (enterSendRule) this.#config.enterSendRule = enterSendRule;
     if (prompts) this.#config.prompts = prompts;
     if (subtitleSetting) {
       this.#config.subtitleSetting = subtitleSetting;

@@ -30,6 +30,7 @@ export const MSG_POPUP_TOGGLE = "toggle_popup"; // 切换 Popup 弹窗的显隐�
 export const MSG_MOUSEHOVER_TOGGLE = "toggle_mousehover"; // 切换鼠标悬停翻译功能
 export const MSG_HOVERNODE_TOGGLE = "toggle_hover_node"; // 切换针对某节点的悬浮高亮状态
 export const MSG_TRANSINPUT_TOGGLE = "toggle_input_translation"; // 切换输入框翻译功能
+export const MSG_ENTER_SEND_TOGGLE = "toggle_enter_send"; // 切换回车翻译功能
 export const MSG_INPUT_TRANSLATE = "input_translate"; // 触发输入框即时翻译
 export const MSG_CONTEXT_MENUS = "context_menus"; // 更新或创建右键上下文菜单
 export const MSG_COMMAND_SHORTCUTS = "command_shortcuts"; // 获取扩展注册的全局快捷键

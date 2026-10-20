@@ -11,6 +11,7 @@ import { sendBgMsg, sendTabMsg, getCurTab } from "../../libs/msg";
 import { isExt } from "../../libs/client";
 import { useI18n } from "../../hooks/I18n";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import {
   MSG_TRANS_TOGGLE,
   MSG_TRANS_PUTRULE,
@@ -19,6 +20,7 @@ import {
   MSG_TRANSBOX_TOGGLE,
   MSG_MOUSEHOVER_TOGGLE,
   MSG_TRANSINPUT_TOGGLE,
+  MSG_ENTER_SEND_TOGGLE,
   OPT_LANGS_FROM_REVERSED as OPT_LANGS_FROM,
   OPT_LANGS_TO_REVERSED as OPT_LANGS_TO,
 } from "../../config";
@@ -179,6 +181,29 @@ export default function PopupCont({
     } catch (err) {
       kissLog("toggle inputtrans", err);
     }
+  };
+
+  // 处理输入框规则的更新（同步到存储）
+  const handleInputRuleChange = (e) => {
+    let { name, value, checked, type } = e.target;
+    const val = type === "checkbox" ? checked : value;
+
+    // 更新全局配置（写入存储）
+    updateSetting((pre) => ({
+      ...pre,
+      inputRule: {
+        ...pre.inputRule,
+        [name]: val,
+      },
+    }));
+    // 同时更新本地状态以便 UI 立即响应
+    setSetting((pre) => ({
+      ...pre,
+      inputRule: {
+        ...pre.inputRule,
+        [name]: val,
+      },
+    }));
   };
 
   // 统一处理翻译规则通用设置项的更新（如自动扫描、扫描全部节点、保留排版、仅显示译文等）
@@ -460,6 +485,147 @@ export default function PopupCont({
           />
         </Grid>
       </Grid>
+
+      {/* --- 独立功能：回车自动发送翻译 --- */}
+      <Stack
+        spacing={1}
+        sx={{
+          mt: 2,
+          mb: 1,
+          p: 1.5,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+        }}
+      >
+        <Typography variant="subtitle2" color="primary">
+          发消息自动翻译 (回车生效)
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              name="transOpen"
+              checked={contextSetting?.enterSendRule?.transOpen || false}
+              onChange={async (e) => {
+                const val = e.target.checked;
+                updateSetting((pre) => ({
+                  ...pre,
+                  enterSendRule: { ...pre.enterSendRule, transOpen: val },
+                }));
+                setSetting((pre) => ({
+                  ...pre,
+                  enterSendRule: { ...pre.enterSendRule, transOpen: val },
+                }));
+                if (!processActions) {
+                  await sendTabMsg(MSG_ENTER_SEND_TOGGLE, { transOpen: val });
+                } else {
+                  processActions({
+                    action: MSG_ENTER_SEND_TOGGLE,
+                    args: { transOpen: val },
+                  });
+                }
+              }}
+            />
+          }
+          label="开启此功能"
+        />
+        <Stack direction="row" spacing={1} alignItems="center">
+          <TextField
+            size="small"
+            label="起始标识(可选,如 #)"
+            value={contextSetting?.enterSendRule?.transSign || ""}
+            onChange={async (e) => {
+              const val = e.target.value;
+              updateSetting((pre) => ({
+                ...pre,
+                enterSendRule: { ...pre.enterSendRule, transSign: val },
+              }));
+              setSetting((pre) => ({
+                ...pre,
+                enterSendRule: { ...pre.enterSendRule, transSign: val },
+              }));
+              if (!processActions) {
+                await sendTabMsg(MSG_ENTER_SEND_TOGGLE, { transSign: val });
+              } else {
+                processActions({
+                  action: MSG_ENTER_SEND_TOGGLE,
+                  args: { transSign: val },
+                });
+              }
+            }}
+            fullWidth
+          />
+        </Stack>
+        <Stack direction="row" spacing={1}>
+          <TextField
+            select
+            SelectProps={{ MenuProps: { disablePortal: true } }}
+            size="small"
+            value={contextSetting?.enterSendRule?.fromLang || "auto"}
+            label="源语言"
+            onChange={async (e) => {
+              const val = e.target.value;
+              updateSetting((pre) => ({
+                ...pre,
+                enterSendRule: { ...pre.enterSendRule, fromLang: val },
+              }));
+              setSetting((pre) => ({
+                ...pre,
+                enterSendRule: { ...pre.enterSendRule, fromLang: val },
+              }));
+              if (!processActions) {
+                await sendTabMsg(MSG_ENTER_SEND_TOGGLE, { fromLang: val });
+              } else {
+                processActions({
+                  action: MSG_ENTER_SEND_TOGGLE,
+                  args: { fromLang: val },
+                });
+              }
+            }}
+            fullWidth
+          >
+            {OPT_LANGS_FROM.map(([lang, name]) => (
+              <MenuItem key={lang} value={lang}>
+                {name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            SelectProps={{ MenuProps: { disablePortal: true } }}
+            size="small"
+            value={contextSetting?.enterSendRule?.toLang || "en"}
+            label="目标语言"
+            onChange={async (e) => {
+              const val = e.target.value;
+              updateSetting((pre) => ({
+                ...pre,
+                enterSendRule: { ...pre.enterSendRule, toLang: val },
+              }));
+              setSetting((pre) => ({
+                ...pre,
+                enterSendRule: { ...pre.enterSendRule, toLang: val },
+              }));
+              if (!processActions) {
+                await sendTabMsg(MSG_ENTER_SEND_TOGGLE, { toLang: val });
+              } else {
+                processActions({
+                  action: MSG_ENTER_SEND_TOGGLE,
+                  args: { toLang: val },
+                });
+              }
+            }}
+            fullWidth
+          >
+            {OPT_LANGS_TO.map(([lang, name]) => (
+              <MenuItem key={lang} value={lang}>
+                {name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </Stack>
 
       {/* 源语言与目标语言选择下拉菜单 */}
       <Stack direction="row" spacing={2}>
